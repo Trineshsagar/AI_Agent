@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Web Agent Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #333;
+        }
+        .container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        label {
+            font-weight: 600;
+            color: #4b5563;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        input[type="text"], textarea, select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s ease-in-out;
+        }
+        input[type="text"]:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        button {
+            background-color: #6366f1;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+            border: none;
+        }
+        button:hover {
+            background-color: #4f46e5;
+            transform: translateY(-1px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        #output {
+            background-color: #e0e7ff;
+            border: 1px solid #a7b3e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 2rem;
+            white-space: pre-wrap; /* Preserve whitespace and wrap text */
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            max-height: 400px;
+            overflow-y: auto;
+            color: #374151;
+        }
+        .slider-container {
+            margin-bottom: 1.5rem;
+        }
+        .slider-value {
+            font-weight: 600;
+            color: #4b5563;
+            margin-left: 0.5rem;
+        }
+        .model-group {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            background-color: #f9fafb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold text-center mb-8 text-gray-800">AI Web Agent Interface</h1>
+
+        <form id="agentForm" class="space-y-4">
+            <label for="api_key">API Key:</label>
+            <input type="text" id="api_key" name="api_key" placeholder="Enter your API Key (Gemini or OpenAI)" required>
+
+            <div class="model-group">
+                <label for="llm_provider" class="mb-2">LLM Provider:</label>
+                <select id="llm_provider" name="llm_provider" class="mb-4" onchange="updateModels()">
+                    <option value="gemini">Google Gemini</option>
+                    <option value="openai">OpenAI</option>
+                </select>
+
+                <label for="llm_model" class="mb-2">LLM Model:</label>
+                <select id="llm_model" name="llm_model">
+                    <!-- Options will be populated by JavaScript -->
+                </select>
+            </div>
+
+            <div class="slider-container">
+                <label for="temperature">Creativity (Temperature): <span id="temperature_value" class="slider-value">0.7</span></label>
+                <input type="range" id="temperature" name="temperature" min="0.0" max="1.0" step="0.1" value="0.7" class="w-full h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer">
+            </div>
+
+            <label for="initial_url">Initial URL:</label>
+            <input type="text" id="initial_url" name="initial_url" placeholder="e.g., https://www.youtube.com/" required>
+
+            <label for="task_description">Task Description:</label>
+            <textarea id="task_description" name="task_description" placeholder="e.g., Search for 'telugu love songs'. From the search results, click on the first relevant video. If an ad appears, click the 'Skip Ads' button. State 'Task complete' once the video is playing and any ads are skipped." required></textarea>
+
+            <button type="submit" class="w-full">Run Agent</button>
+        </form>
+
+        <div id="output" class="mt-8 p-4 bg-gray-100 border border-gray-300 rounded-lg overflow-auto">
+            Agent Output will appear here...
+        </div>
+    </div>
+
+    <script>
+        const models = {
+            gemini: [
+                { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (Free/Fast)' },
+                { value: 'gemini-1.5-pro-latest', label: 'Gemini 1.5 Pro (Paid/Advanced)' },
+                { value: 'gemini-pro', label: 'Gemini Pro (Legacy)' },
+                { value: 'gemini-1.0-pro', label: 'Gemini 1.0 Pro' },
+                { value: 'gemini-1.0-pro-001', label: 'Gemini 1.0 Pro 001' },
+                { value: 'gemini-1.0-pro-vision-latest', label: 'Gemini 1.0 Pro Vision (Multimodal)' },
+                { value: 'gemini-pro-vision', label: 'Gemini Pro Vision (Legacy Multimodal)' }
+            ],
+            openai: [
+                { value: 'gpt-4o', label: 'GPT-4o (Latest, Paid)' },
+                { value: 'gpt-4-turbo-preview', label: 'GPT-4 Turbo Preview (Paid)' },
+                { value: 'gpt-4', label: 'GPT-4 (Paid)' },
+                { value: 'gpt-4-32k', label: 'GPT-4 32K Context (Paid)' },
+                { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo (Recommended, Paid)' },
+                { value: 'gpt-3.5-turbo-instruct', label: 'GPT-3.5 Turbo Instruct (Paid)' }
+            ]
+        };
+
+        function updateModels() {
+            const providerSelect = document.getElementById('llm_provider');
+            const modelSelect = document.getElementById('llm_model');
+            const selectedProvider = providerSelect.value;
+
+            console.log("updateModels() called."); // Debugging log
+            console.log("Selected LLM Provider:", selectedProvider); // Debugging log
+
+            // Clear existing options more explicitly
+            while (modelSelect.firstChild) {
+                modelSelect.removeChild(modelSelect.firstChild);
+            }
+            console.log("Model select options explicitly cleared."); // Debugging log
+
+            const modelsForProvider = models[selectedProvider];
+            if (modelsForProvider) {
+                console.log("Models to be populated for selected provider:", modelsForProvider); // Debugging log
+                modelsForProvider.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.value;
+                    option.textContent = model.label;
+                    modelSelect.appendChild(option);
+                });
+                console.log("Models populated successfully."); // Debugging log
+            } else {
+                console.log("No models array found for selected provider:", selectedProvider); // Debugging log
+            }
+        }
+
+        // Ensure updateModels() is called after the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            updateModels();
+        });
+
+        // Update temperature value display
+        document.getElementById('temperature').addEventListener('input', function() {
+            document.getElementById('temperature_value').textContent = this.value;
+        });
+
+        document.getElementById('agentForm').addEventListener('submit', async function(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            const outputDiv = document.getElementById('output');
+            outputDiv.textContent = 'Running agent... Please wait. This may take a moment as a browser window will open.';
+            outputDiv.style.color = '#374151';
+
+            const formData = new FormData(event.target);
+            const data = Object.fromEntries(formData.entries());
+
+            try {
+                const response = await fetch('/run_agent', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'error') {
+                    outputDiv.textContent = 'Error: ' + result.logs.join('\n');
+                    outputDiv.style.color = '#dc2626'; // Red color for errors
+                } else {
+                    outputDiv.textContent = result.logs.join('\n');
+                    outputDiv.style.color = '#16a34a'; // Green color for success
+                }
+            } catch (error) {
+                outputDiv.textContent = 'An unexpected error occurred during communication with the server: ' + error.message;
+                outputDiv.style.color = '#dc2626';
+            }
+        });
+    </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Web Agent Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #333;
+        }
+        .container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        label {
+            font-weight: 600;
+            color: #4b5563;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        input[type="text"], textarea, select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s ease-in-out;
+        }
+        input[type="text"]:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        button {
+            background-color: #6366f1;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+            border: none;
+        }
+        button:hover {
+            background-color: #4f46e5;
+            transform: translateY(-1px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        #output {
+            background-color: #e0e7ff;
+            border: 1px solid #a7b3e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 2rem;
+            white-space: pre-wrap; /* Preserve whitespace and wrap text */
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            max-height: 400px;
+            overflow-y: auto;
+            color: #374151;
+        }
+        .slider-container {
+            margin-bottom: 1.5rem;
+        }
+        .slider-value {
+            font-weight: 600;
+            color: #4b5563;
+            margin-left: 0.5rem;
+        }
+        .model-group {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            background-color: #f9fafb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold text-center mb-8 text-gray-800">AI Web Agent Interface</h1>
+
+        <form id="agentForm" class="space-y-4">
+            <label for="api_key">API Key:</label>
+            <input type="text" id="api_key" name="api_key" placeholder="Enter your API Key (Gemini or OpenAI)" required>
+
+            <div class="model-group">
+                <label for="llm_provider" class="mb-2">LLM Provider:</label>
+                <select id="llm_provider" name="llm_provider" class="mb-4" onchange="updateModels()">
+                    <option value="gemini">Google Gemini</option>
+                    <option value="openai">OpenAI</option>
+                </select>
+
+                <label for="llm_model" class="mb-2">LLM Model:</label>
+                <select id="llm_model" name="llm_model">
+                    <!-- Options will be populated by JavaScript -->
+                </select>
+            </div>
+
+            <div class="slider-container">
+                <label for="temperature">Creativity (Temperature): <span id="temperature_value" class="slider-value">0.7</span></label>
+                <input type="range" id="temperature" name="temperature" min="0.0" max="1.0" step="0.1" value="0.7" class="w-full h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer">
+            </div>
+
+            <label for="initial_url">Initial URL:</label>
+            <input type="text" id="initial_url" name="initial_url" placeholder="e.g., https://www.youtube.com/" required>
+
+            <label for="task_description">Task Description:</label>
+            <textarea id="task_description" name="task_description" placeholder="e.g., Search for 'telugu love songs'. From the search results, click on the first relevant video. If an ad appears, click the 'Skip Ads' button. State 'Task complete' once the video is playing and any ads are skipped." required></textarea>
+
+            <button type="submit" class="w-full">Run Agent</button>
+        </form>
+
+        <div id="output" class="mt-8 p-4 bg-gray-100 border border-gray-300 rounded-lg overflow-auto">
+            Agent Output will appear here...
+        </div>
+    </div>
+
+    <script>
+        const models = {
+            gemini: [
+                { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (Free/Fast)' },
+                { value: 'gemini-1.5-pro-latest', label: 'Gemini 1.5 Pro (Paid/Advanced)' },
+                { value: 'gemini-pro', label: 'Gemini Pro (Legacy)' },
+                { value: 'gemini-1.0-pro', label: 'Gemini 1.0 Pro' },
+                { value: 'gemini-1.0-pro-001', label: 'Gemini 1.0 Pro 001' },
+                { value: 'gemini-1.0-pro-vision-latest', label: 'Gemini 1.0 Pro Vision (Multimodal)' },
+                { value: 'gemini-pro-vision', label: 'Gemini Pro Vision (Legacy Multimodal)' }
+            ],
+            openai: [
+                { value: 'gpt-4o', label: 'GPT-4o (Latest, Paid)' },
+                { value: 'gpt-4-turbo-preview', label: 'GPT-4 Turbo Preview (Paid)' },
+                { value: 'gpt-4', label: 'GPT-4 (Paid)' },
+                { value: 'gpt-4-32k', label: 'GPT-4 32K Context (Paid)' },
+                { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo (Recommended, Paid)' },
+                { value: 'gpt-3.5-turbo-instruct', label: 'GPT-3.5 Turbo Instruct (Paid)' }
+            ]
+        };
+
+        function updateModels() {
+            const providerSelect = document.getElementById('llm_provider');
+            const modelSelect = document.getElementById('llm_model');
+            const selectedProvider = providerSelect.value;
+
+            console.log("updateModels() called."); // Debugging log
+            console.log("Selected LLM Provider:", selectedProvider); // Debugging log
+
+            // Clear existing options more explicitly
+            while (modelSelect.firstChild) {
+                modelSelect.removeChild(modelSelect.firstChild);
+            }
+            console.log("Model select options explicitly cleared."); // Debugging log
+
+            const modelsForProvider = models[selectedProvider];
+            if (modelsForProvider) {
+                console.log("Models to be populated for selected provider:", modelsForProvider); // Debugging log
+                modelsForProvider.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.value;
+                    option.textContent = model.label;
+                    modelSelect.appendChild(option);
+                });
+                console.log("Models populated successfully."); // Debugging log
+            } else {
+                console.log("No models array found for selected provider:", selectedProvider); // Debugging log
+            }
+        }
+
+        // Ensure updateModels() is called after the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            updateModels();
+        });
+
+        // Update temperature value display
+        document.getElementById('temperature').addEventListener('input', function() {
+            document.getElementById('temperature_value').textContent = this.value;
+        });
+
+        document.getElementById('agentForm').addEventListener('submit', async function(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            const outputDiv = document.getElementById('output');
+            outputDiv.textContent = 'Running agent... Please wait. This may take a moment as a browser window will open.';
+            outputDiv.style.color = '#374151';
+
+            const formData = new FormData(event.target);
+            const data = Object.fromEntries(formData.entries());
+
+            try {
+                const response = await fetch('/run_agent', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'error') {
+                    outputDiv.textContent = 'Error: ' + result.logs.join('\n');
+                    outputDiv.style.color = '#dc2626'; // Red color for errors
+                } else {
+                    outputDiv.textContent = result.logs.join('\n');
+                    outputDiv.style.color = '#16a34a'; // Green color for success
+                }
+            } catch (error) {
+                outputDiv.textContent = 'An unexpected error occurred during communication with the server: ' + error.message;
+                outputDiv.style.color = '#dc2626';
+            }
+        });
+    </script>
+</body>
+</html>
