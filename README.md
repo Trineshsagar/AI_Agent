@@ -43,7 +43,8 @@ This agent isn't just a tool; it's your personal web wizard, making online tasks
 Get Started Today! 📈
 Dive in with our easy setup— you'll be automating in minutes:
 
-➡️Install Python and key libraries: Flask, Selenium, BeautifulSoup4, and Requests. 🐍
+
+➡️Install Python and key libraries: Flask, Selenium, BeautifulSoup4, and Requests. 🐍 in your powershell inside the ai_agent folder 
 
 [requirements.txt](https://github.com/user-attachments/files/21415613/requirements.txt)
 
