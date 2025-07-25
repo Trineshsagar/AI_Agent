@@ -53,7 +53,9 @@ Dive in with our easy setup— you'll be automating in minutes:
 #requests
 #google-generativeai
 
-  run  pip install -r requirments.txt
+run the following command to install the requirments
+
+    pip install -r requirments.txt
 
    * make sure that your computer had Python pre installed to run this tool
      
@@ -69,13 +71,14 @@ Dive in with our easy setup— you'll be automating in minutes:
 
   * Download and  save all the files (app.py ,agent.py, requirments.txt and create another folder as templets\index.html) ,  in the new folder as "ai-agent".
 
-  * run the following command in the powershell at  c:\ai-agent
-    python -m venv .venv
-    .venv\scripts\activate
+  ➡️ run the following command in the powershell at  c:\ai-agent
+  
+      python -m venv .venv
+     .venv\scripts\activate
 
 ➡️ Launch the Flask app on your local server. 🚀
 
-
+      python app.py
 
 Open the web interface in your browser and start commanding! 🌟
 
